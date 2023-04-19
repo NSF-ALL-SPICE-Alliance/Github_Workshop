@@ -1,0 +1,186 @@
+---
+title: "monitoring aid analysis"
+author: "Connor"
+date: "4/11/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(plotly)
+library(readxl)
+library(janitor)
+options(scipen = 99)
+```
+
+```{r}
+activity_clusters <- read_csv(here("data/activity_cluster_data.csv"))
+```
+
+```{r}
+descriptive_stats <- read_excel(here("data/descriptive_statistics_clusters.xlsx"))
+```
+
+
+
+
+```{r}
+activity_clusters <- activity_clusters %>% 
+  mutate(disbursement = USD_Disbursement * 1000000)
+```
+
+
+
+
+
+```{r}
+total_disbursments_by_country <- activity_clusters %>% 
+  group_by(RecipientName) %>% 
+  summarise(disbursement = sum(disbursement))
+```
+
+```{r}
+total_disbursments_by_country_sector <-activity_clusters %>% 
+  group_by(RecipientName, Sector) %>% 
+  summarise(disbursement = sum(disbursement))
+```
+
+```{r}
+unique(activity_clusters$RecipientName)
+```
+
+
+
+```{r}
+sids <- c('Anguilla', 'Antigua and Barbuda', 'Bahrain', 'Barbados', 'Belize', 'Cabo Verde', 'Comoros', 
+             'Cook Islands', 'Dominica', 'Dominican Republic', 'Fiji', 'Grenada', 'Guinea-Bissau', 'Guyana', 
+             'Haiti', 'Jamaica', 'Kiribati', 'Maldives', 'Marshall Islands', 'Mauritius', 'Micronesia', 
+             'Montserrat', 'Nauru', 'Niue', 'Palau', 'Papua New Guinea', 'Saint Kitts and Nevis', 'Saint Lucia', 
+             'Saint Vincent and the Grenadines', 'Samoa', 'Sao Tome and Principe', 'Seychelles', 'Solomon Islands', 
+             'Suriname', 'Timor-Leste', 'Tokelau', 'Tonga', 'Trinidad and Tobago', 'Turks and Caicos Islands', 
+             'Tuvalu', 'Vanuatu')
+```
+
+
+```{r}
+activity_clusters_sids <- activity_clusters %>%
+  filter(RecipientName %in% sids)
+```
+
+```{r}
+unique(activity_clusters_sids$RecipientName)
+```
+```{r}
+total_disbursments_by_sids <- activity_clusters_sids %>% 
+  group_by(RecipientName) %>% 
+  summarise(disbursement = sum(disbursement))
+```
+
+
+```{r}
+total_disbursments_by_sids_sector <- activity_clusters_sids %>% 
+  group_by(RecipientName, Sector) %>% 
+  summarise(disbursement = sum(disbursement))
+```
+
+```{r}
+plot <- ggplot(total_disbursments_by_sids_sector, aes(x = disbursement,
+                                              y = reorder(RecipientName, disbursement),
+                                              fill = Sector)) +
+  geom_bar(stat = "identity") +
+  theme_minimal()
+
+plot
+```
+
+```{r}
+ggplotly(plot)
+```
+
+
+Percentages SIDS
+
+```{r}
+total_disbursments_by_sids_sector <- total_disbursments_by_sids_sector %>% 
+  group_by(RecipientName)  %>% 
+  mutate(percentage = disbursement/sum(disbursement))
+
+```
+
+```{r}
+tile_plot <- ggplot(total_disbursments_by_sids_sector, aes(x=Sector , y= RecipientName,
+                                              fill = percentage)) +
+  geom_tile() +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, size = 4, hjust = 1),
+        axis.text.y = element_text(size = 3, hjust = 1)) +
+  scale_fill_gradient(low = "khaki", high = "red")
+  
+tile_plot
+
+```
+
+```{r}
+ggplotly(tile_plot)
+```
+
+Percentages global
+
+```{r}
+total_disbursments_by_country_sector <- total_disbursments_by_country_sector %>% 
+  group_by(RecipientName)  %>% 
+  mutate(percentage = disbursement/sum(disbursement))
+```
+
+```{r}
+colnames(activity_clusters)[colnames(activity_clusters) == "cluster"] ="Cluster"
+```
+
+
+
+```{r}
+activity_stats_join<- full_join(activity_clusters, descriptive_stats, by='Cluster')
+```
+
+```{r}
+activity_stats_sids<-activity_stats_join %>%
+  filter(RecipientName %in% sids)
+```
+
+```{r}
+activity_stats_sids_clusters<- activity_stats_sids %>% 
+  group_by(Cluster, RecipientName, Topic, Sector) %>%
+  summarize(sum_disbursment_by_cluster=sum(disbursement))
+```
+
+
+```{r}
+activity_stats_sids <- activity_stats_sids %>% 
+  group_by(RecipientName)  %>% 
+  mutate(percentage = disbursement/sum(disbursement))
+```
+
+```{r}
+activity_stats_sids_clusters<-activity_stats_sids_clusters %>% 
+  group_by(RecipientName)  %>% 
+  mutate(percentage = sum_disbursment_by_cluster/sum(sum_disbursment_by_cluster))
+```
+
+```{r}
+activity_stats_sids <- activity_stats_sids %>% 
+  clean_names()
+```
+
+
+```{r}
+topic_sector<- activity_stats_sids %>% 
+  group_by(topic, sector) %>% 
+  summarize(percentage_disbursement_topic_by_sector = sum_disbursement/sum(sum_disbursement))
+```
+
+```{r}
+
+```
+
